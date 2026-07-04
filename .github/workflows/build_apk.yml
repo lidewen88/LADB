@@ -1,4 +1,4 @@
-name: Build LADB APK
+name: Build LADB Signed Release APK
 on:
   push:
     branches: [ main, master ]
@@ -27,15 +27,26 @@ jobs:
             build-tools;35.0.0
             platforms;android-35
 
-      - name: 给编译脚本授权
+      # 从仓库密钥恢复你的签名文件 my-key.jks
+      - name: 还原签名密钥
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > my-key.jks
+          echo "storeFile=../my-key.jks" > app/signing.properties
+          echo "storePassword=${{ secrets.STORE_PASSWORD }}" >> app/signing.properties
+          echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> app/signing.properties
+          echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> app/signing.properties
+
+      - name: 授予编译脚本权限
         run: chmod +x gradlew
 
-      - name: 编译Debug安装包
-        run: ./gradlew assembleDebug
+      # 编译带签名Release安装包
+      - name: 编译Release签名APK
+        run: ./gradlew assembleRelease
 
-      - name: 上传APK成品
+      # 上传成品APK
+      - name: 导出编译好的APK
         uses: actions/upload-artifact@v5
         with:
-          name: LADB编译包
-          path: app/build/outputs/apk/debug/*.apk
+          name: LADB-签名Release包
+          path: app/build/outputs/apk/release/*.apk
           retention-days: 30

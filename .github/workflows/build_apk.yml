@@ -24,8 +24,8 @@ jobs:
           accept-android-sdk-licenses: true
           packages: >
             platform-tools
-            build-tools;34.0.0
-            platforms;android-34
+            build-tools;35.0.0
+            platforms;android-35
 
       - name: 给编译脚本授权
         run: chmod +x gradlew

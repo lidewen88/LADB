@@ -48,5 +48,5 @@ jobs:
         uses: actions/upload-artifact@v5
         with:
           name: LADB-签名Release包
-          path: app/build/outputs/apk/release/*.apk
+          path: app/build/release/*.apk
           retention-days: 30

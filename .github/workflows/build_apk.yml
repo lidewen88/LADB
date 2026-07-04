@@ -1,4 +1,4 @@
-name: Build LADB Release + 流水线自动补签名
+name: Build LADB + 禁用签名验证 + 自动签名
 on:
   push:
     branches: [ main, master ]
@@ -27,24 +27,24 @@ jobs:
             build-tools;35.0.0
             platforms;android-35
 
-      # 1. 还原你的密钥文件 my-key.jks
+      # 1. 还原签名密钥
       - name: 还原签名密钥
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > my-key.jks
 
-      # 2. 编译无签名Release包（不改动gradle，原生输出unsigned）
-      - name: 编译未签名Release APK
-        run: chmod +x gradlew && ./gradlew assembleRelease
+      # 2. 编译+禁用签名验证（关键：添加-DDISABLE_LICENSE_CHECK=true参数）
+      - name: 编译并禁用验证
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease -PDISABLE_LICENSE_CHECK=true
 
-      # 3. 使用apksigner给未签名包补签名（关键，无需改项目源码）
+      # 3. 使用apksigner补签名（不改动源码的签名方案）
       - name: 给APK正式签名
         run: |
-          # 定义工具路径
           APKSIGNER=$ANDROID_HOME/build-tools/35.0.0/apksigner
           UNSIGNED_APK=app/build/outputs/apk/release/app-release-unsigned.apk
           SIGNED_APK=app/build/outputs/apk/release/app-release-signed.apk
 
-          # 执行签名
           $APKSIGNER sign \
             --ks my-key.jks \
             --ks-pass pass:${{ secrets.STORE_PASSWORD }} \
@@ -53,11 +53,13 @@ jobs:
             --out $SIGNED_APK \
             $UNSIGNED_APK
 
-      # 查看生成文件
-      - name: 列出APK
-        run: ls -la app/build/outputs/apk/release/
+      # 4. 验证签名结果
+      - name: 验证APK签名
+        run: |
+          $ANDROID_HOME/build-tools/35.0.0/apksigner verify -v app/build/outputs/apk/release/app-release-signed.apk
+          ls -la app/build/outputs/apk/release/
 
-      # 只上传签名好的安装包
+      # 5. 上传最终可安装包
       - name: 上传已签名APK
         uses: actions/upload-artifact@v5
         with:
